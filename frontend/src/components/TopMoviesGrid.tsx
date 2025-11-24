@@ -147,6 +147,8 @@ const TopMoviesGrid = () => {
 
   return (
     <section id="top-movies" className="py-20 relative overflow-hidden">
+      {/* Background Glow removed - moved to Index.tsx */}
+
       {selectedMovie && (
         <div
           className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 transition-all duration-300"

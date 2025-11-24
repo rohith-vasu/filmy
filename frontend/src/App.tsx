@@ -10,27 +10,41 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Explore from "./pages/Explore";
+import Recommendations from "./pages/Recommendations";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
+import RegisterPromptModal from "@/components/auth/RegisterPromptModal";
+import SessionExpiredModal from "@/components/auth/SessionExpiredModal";
+import GenreSelectionModal from "@/components/auth/GenreSelectionModal";
+
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }) => {
+const RootRoute = () => {
   const { isAuthenticated, authLoaded } = useAuthStore();
 
   if (!authLoaded)
     return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Index />;
 };
 
-const PublicOnlyRoute = ({ children }) => {
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, authLoaded } = useAuthStore();
 
   if (!authLoaded)
     return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
 
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+  return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
+};
+
+const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, authLoaded } = useAuthStore();
+
+  if (!authLoaded)
+    return <div className="min-h-screen flex items-center justify-center">Loading…</div>;
+
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 };
 
 const App = () => (
@@ -42,8 +56,13 @@ const App = () => (
         {/* Runs ONCE, restores authentication */}
         <AuthInitializer />
 
+        {/* Global modals */}
+        <RegisterPromptModal />
+        <SessionExpiredModal />
+        <GenreSelectionModal />
+
         <Routes>
-          <Route path="/" element={<Index />} />
+          <Route path="/" element={<RootRoute />} />
 
           <Route
             path="/login"
@@ -70,6 +89,15 @@ const App = () => (
             element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/recommendations"
+            element={
+              <ProtectedRoute>
+                <Recommendations />
               </ProtectedRoute>
             }
           />

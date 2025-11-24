@@ -16,7 +16,11 @@ database = settings.db.database
 database_url = f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database}"
 
 engine = create_engine(
-    database_url, pool_size=10, max_overflow=20, pool_timeout=60
+    database_url,
+    pool_size=50,
+    max_overflow=100,
+    pool_timeout=60,
+    pool_recycle=1800,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -12,13 +12,12 @@ from app.models.user_feedback import UserFeedback
 class UserFeedbackCreate(BaseModel):
     user_id: Optional[int] = Field(None, description="User ID providing feedback")
     movie_id: int = Field(..., description="Movie ID being rated")
-    rating: Optional[float] = Field(None, ge=1, le=5, description="Rating 1–5")
+    rating: Optional[float] = Field(None, ge=0.5, le=5, description="Rating 1–5")
     review: Optional[str] = Field(None, description="Review of the movie")
     status: Optional[str] = Field(None, description="status: 'watchlist'|'watched'")
 
-
 class UserFeedbackUpdate(BaseModel):
-    rating: Optional[float] = Field(None, ge=1, le=5)
+    rating: Optional[float] = Field(None, ge=0.5, le=5)
     review: Optional[str] = None
     status: Optional[str] = None
 
@@ -32,8 +31,6 @@ class UserFeedbackResponse(BaseModel):
     rating: Optional[float]
     review: Optional[str]
     status: Optional[str]
-    created_at: datetime
-    updated_at: datetime
 
 
 # ---------- Handler ----------
@@ -70,6 +67,11 @@ class UserFeedbackHandler(CRUDManager[UserFeedback, UserFeedbackCreate, UserFeed
     
     def list_all(self, skip: int = 0, limit: int = 20) -> List[UserFeedbackResponse]:
         return super().list_all(skip, limit)
+
+    def bulk_create(self, feedback_list: List[UserFeedbackCreate]):
+        objs = [self._model(**fb.dict()) for fb in feedback_list]
+        self._db.bulk_save_objects(objs)
+        self._db.commit()
 
     def get_by_user_movie(self, user_id: int, movie_id: int) -> Optional[UserFeedbackResponse]:
         """Get feedback by user and movie."""
@@ -117,7 +119,7 @@ class UserFeedbackHandler(CRUDManager[UserFeedback, UserFeedbackCreate, UserFeed
         languages = set()
 
         for fb in feedbacks:
-            movie = movie_handler.get_by_id_raw(fb.movie_id)  # we'll add get_by_id_raw
+            movie = movie_handler.get_by_id(fb.movie_id)
 
             if movie and movie.original_language:
                 languages.add(movie.original_language)

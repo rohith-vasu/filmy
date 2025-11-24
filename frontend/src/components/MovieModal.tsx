@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import type { MovieDB } from "@/types";
 import { moviesAPI } from "@/lib/api";
 import { useAuthStore } from "@/stores/authStore";
+import { useStatsStore } from "@/stores/statsStore";
 import api from "@/lib/api";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
@@ -59,9 +61,8 @@ const StarRating = ({
           <div key={idx} className={`relative ${sizeClass}`}>
             <svg
               viewBox="0 0 24 24"
-              className={`${sizeClass} text-gray-600 transform transition-transform duration-150 ${
-                !readOnly ? "hover:scale-110" : ""
-              } ${isPopped ? "scale-125" : ""}`}
+              className={`${sizeClass} text-gray-600 transform transition-transform duration-150 ${!readOnly ? "hover:scale-110" : ""
+                } ${isPopped ? "scale-125" : ""}`}
             >
               <path
                 fill="currentColor"
@@ -107,6 +108,7 @@ const StarRating = ({
 /** MovieModal */
 const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
   const { isAuthenticated } = useAuthStore();
+  const { fetchStats } = useStatsStore();
 
   const [movie, setMovie] = useState<MovieDB | null>(null);
   const [loading, setLoading] = useState(true);
@@ -157,8 +159,8 @@ const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
             typeof d.genres === "string"
               ? d.genres.replace(/[{}\[\]"]/g, "")
               : Array.isArray(d.genres)
-              ? d.genres.join(", ")
-              : "N/A",
+                ? d.genres.join(", ")
+                : "N/A",
           language: d.original_language
             ? d.original_language.charAt(0).toUpperCase() + d.original_language.slice(1)
             : "N/A",
@@ -166,7 +168,7 @@ const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
           popularity: d.popularity || 0,
           poster_url: d.poster_path
             ? `${TMDB_IMAGE_BASE}${d.poster_path}`
-            : "/placeholder-movie.jpg",
+            : "/poster-not-found.png",
           release_year: d.release_year ? String(d.release_year) : "N/A",
         });
       } catch (err) {
@@ -257,6 +259,8 @@ const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
           ? "Added to Watchlist (rating removed)"
           : "Removed from Watchlist"
       );
+
+      fetchStats();
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Failed to update watchlist");
       setStatus((prev) => (prev === "watchlist" ? "none" : "watchlist"));
@@ -306,6 +310,8 @@ const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
 
       setIsEditing(false);
       toast.success("Saved");
+
+      fetchStats();
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Failed to save changes");
     } finally {
@@ -321,198 +327,190 @@ const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
     setIsEditing(false);
   };
 
-  if (loading) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black/80 z-[9999]">
-        <Loader2 className="w-10 h-10 animate-spin text-white" />
-      </div>
-    );
-  }
-  if (!movie) return null;
-
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4" onClick={onClose}>
-      <div
-        className="bg-zinc-900 text-white rounded-2xl shadow-2xl w-[95%] sm:w-[780px] max-h-[85vh] overflow-y-auto scrollbar-hide p-6 relative"
-        onClick={(e) => e.stopPropagation()}
+    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className="text-white border-zinc-800 max-w-[95%] sm:max-w-[780px] max-h-[85vh] overflow-y-auto scrollbar-hide p-6"
+        style={{ background: "var(--gradient-hero)" }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        {/* Close */}
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-white text-xl">
-          ✕
-        </button>
+        <DialogTitle className="sr-only">{movie?.title || "Movie Details"}</DialogTitle>
+        <DialogDescription className="sr-only">Details for {movie?.title}</DialogDescription>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {/* Poster */}
-          <div className="flex justify-center">
-            <img src={movie.poster_url} alt={movie.title} className="rounded-lg w-full sm:w-[300px] object-cover" />
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-10 h-10 animate-spin text-white" />
           </div>
+        ) : movie ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Poster */}
+            <div className="flex justify-center">
+              <img src={movie.poster_url} alt={movie.title} className="rounded-lg w-full sm:w-[300px] object-cover" />
+            </div>
 
-          {/* Info */}
-          <div className="flex flex-col">
-            <h3 className="text-2xl font-semibold mb-1 tracking-wide">{movie.title}</h3>
+            {/* Info */}
+            <div className="flex flex-col">
+              <h3 className="text-2xl font-semibold mb-1 tracking-wide">{movie.title}</h3>
 
-            <p className="text-sm text-gray-300 mb-1">
-              {movie.release_year}{movie.genres ? ` • ${movie.genres}` : ""}
-            </p>
+              <p className="text-sm text-gray-300 mb-1">
+                {movie.release_year}{movie.genres ? ` • ${movie.genres}` : ""}
+              </p>
 
-            <p className="text-sm text-gray-400 mb-1">Language: {movie.language}</p>
-            {movie.runtime > 0 && (
-              <p className="text-sm text-gray-400 mb-4">Runtime: {movie.runtime} min</p>
-            )}
+              <p className="text-sm text-gray-400 mb-1">Language: {movie.language}</p>
+              {movie.runtime > 0 && (
+                <p className="text-sm text-gray-400 mb-4">Runtime: {movie.runtime} min</p>
+              )}
 
-            <p className={`${bodyTextClass} mb-6`}>{movie.overview || "No description available."}</p>
+              <p className={`${bodyTextClass} mb-6`}>{movie.overview || "No description available."}</p>
 
-            {/* Action Pills */}
-            <div className="flex gap-3 mb-4">
-              <button
-                type="button"
-                disabled={!isAuthenticated}
-                onClick={handleToggleWatched}
-                className={`px-4 py-2 rounded-full flex items-center gap-2 border ${
-                  !isAuthenticated
+              {/* Action Pills */}
+              <div className="flex gap-3 mb-4">
+                <button
+                  type="button"
+                  disabled={!isAuthenticated}
+                  onClick={handleToggleWatched}
+                  className={`px-4 py-2 rounded-full flex items-center gap-2 border ${!isAuthenticated
                     ? "opacity-40 cursor-not-allowed border-gray-700 text-gray-400"
                     : status === "watched"
-                    ? "bg-green-500 text-black border-green-600"
-                    : "border-gray-700 text-gray-300"
-                }`}
-              >
-                <Check className="w-4 h-4" /> Watched
-              </button>
+                      ? "bg-green-500 text-black border-green-600"
+                      : "border-gray-700 text-gray-300"
+                    }`}
+                >
+                  <Check className="w-4 h-4" /> Watched
+                </button>
 
-              <button
-                type="button"
-                disabled={!isAuthenticated}
-                onClick={handleToggleWatchlistClick}
-                className={`px-4 py-2 rounded-full flex items-center gap-2 border ${
-                  !isAuthenticated
+                <button
+                  type="button"
+                  disabled={!isAuthenticated}
+                  onClick={handleToggleWatchlistClick}
+                  className={`px-4 py-2 rounded-full flex items-center gap-2 border ${!isAuthenticated
                     ? "opacity-40 cursor-not-allowed border-gray-700 text-gray-400"
                     : status === "watchlist"
-                    ? "bg-yellow-400 text-black border-yellow-500"
-                    : "border-gray-700 text-gray-300"
-                }`}
-              >
-                <Plus className="w-4 h-4" /> Watchlist
-              </button>
-            </div>
-
-            {/* Feedback Section */}
-            <div className="mt-auto pt-4 border-t border-gray-700 relative">
-              {/* Pencil Icon — only if logged in + hasFeedback + !editing */}
-              {isAuthenticated && hasFeedback && !isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                      ? "bg-white text-black border-white"
+                      : "border-gray-700 text-gray-300"
+                    }`}
                 >
-                  <Pencil className="w-4 h-4" />
+                  <Plus className="w-4 h-4" /> Watchlist
                 </button>
-              )}
+              </div>
 
-              {/* If user is NOT logged in */}
-              {!isAuthenticated ? (
-                <p className="text-xs text-gray-400 text-center">
-                  <a href="/login" className="text-primary hover:underline font-medium">
-                    Log in
-                  </a>{" "}
-                  to rate or review this movie.
-                </p>
-              ) : (
-                <>
-                  {isLoadingFeedback ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Loading feedback...
-                    </div>
-                  ) : (
-                    <>
-                      {/* VIEW MODE */}
-                      <div
-                        className={`transition-opacity duration-300 ${
-                          isEditing ? "opacity-0 pointer-events-none h-0" : "opacity-100"
-                        }`}
-                      >
-                        {hasFeedback ? (
-                          <>
-                            {/* Rating */}
-                            {originalFeedback?.rating > 0 && (
-                              <div className="mb-4">
-                                <Label className="text-sm font-medium">Your Rating</Label>
-                                <div className="mt-2">
-                                  <StarRating value={originalFeedback.rating} readOnly small />
+              {/* Feedback Section */}
+              <div className="mt-auto pt-4 border-t border-gray-700 relative">
+                {/* Pencil Icon — only if logged in + hasFeedback + !editing */}
+                {isAuthenticated && hasFeedback && !isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="absolute top-2 right-2 text-gray-400 hover:text-white"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+
+                {/* If user is NOT logged in */}
+                {!isAuthenticated ? (
+                  <p className="text-xs text-gray-400 text-center">
+                    <Link to="/login" className="text-primary hover:underline font-medium">
+                      Log in
+                    </Link>{" "}
+                    to rate or review this movie.
+                  </p>
+                ) : (
+                  <>
+                    {isLoadingFeedback ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <Loader2 className="w-4 h-4 animate-spin" /> Loading feedback...
+                      </div>
+                    ) : (
+                      <>
+                        {/* VIEW MODE */}
+                        <div
+                          className={`transition-opacity duration-300 ${isEditing ? "opacity-0 pointer-events-none h-0" : "opacity-100"
+                            }`}
+                        >
+                          {hasFeedback ? (
+                            <>
+                              {/* Rating */}
+                              {originalFeedback?.rating > 0 && (
+                                <div className="mb-4">
+                                  <Label className="text-sm font-medium">Your Rating</Label>
+                                  <div className="mt-2">
+                                    <StarRating value={originalFeedback.rating} readOnly small />
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-
-                            {/* Review */}
-                            {originalFeedback?.review ? (
-                              <div className="mb-2">
-                                <Label className="text-sm font-medium">Your Review</Label>
-                                <div className="mt-3 bg-zinc-800 rounded-md p-3 text-sm text-gray-300 whitespace-pre-wrap">
-                                  {originalFeedback.review}
-                                </div>
-                              </div>
-                            ) : null}
-
-                            {/* Only watchlist */}
-                            {originalFeedback?.rating === 0 &&
-                              !originalFeedback?.review &&
-                              originalFeedback.status === "watchlist" && (
-                                <p className="text-sm text-gray-400">
-                                  This movie is in your watchlist.
-                                </p>
                               )}
-                          </>
-                        ) : (
-                          <p className="text-sm text-gray-400">Mark as watched to leave a rating & review.</p>
-                        )}
-                      </div>
 
-                      {/* EDIT MODE */}
-                      <div
-                        className={`transition-opacity duration-300 ${
-                          isEditing ? "opacity-100" : "opacity-0 pointer-events-none h-0"
-                        }`}
-                      >
-                        <Label className="text-sm font-medium mb-2 block">Rate this movie</Label>
-                        <StarRating value={ratingValue} setValue={setRatingValue} />
+                              {/* Review */}
+                              {originalFeedback?.review ? (
+                                <div className="mb-2">
+                                  <Label className="text-sm font-medium">Your Review</Label>
+                                  <div className="mt-3 bg-zinc-800 rounded-md p-3 text-sm text-gray-300 whitespace-pre-wrap">
+                                    {originalFeedback.review}
+                                  </div>
+                                </div>
+                              ) : null}
 
-                        <div className="mt-4">
-                          <Label className="text-sm font-medium mb-2 block">Your Review (optional)</Label>
-                          <textarea
-                            rows={3}
-                            value={reviewText}
-                            onChange={(e) => setReviewText(e.target.value)}
-                            className="w-full bg-zinc-800 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 outline-none resize-none"
-                            placeholder="Write your thoughts..."
-                          />
+                              {/* Only watchlist */}
+                              {originalFeedback?.rating === 0 &&
+                                !originalFeedback?.review &&
+                                originalFeedback.status === "watchlist" && (
+                                  <p className="text-sm text-gray-400">
+                                    This movie is in your watchlist.
+                                  </p>
+                                )}
+                            </>
+                          ) : (
+                            <p className="text-sm text-gray-400">Mark as watched to leave a rating & review.</p>
+                          )}
                         </div>
 
-                        <div className="flex justify-end gap-3 mt-4">
-                          <Button variant="secondary" onClick={handleCancel} disabled={isSubmitting}>
-                            Cancel
-                          </Button>
-                          <Button onClick={handleSave} disabled={isSubmitting} className="gradient-cinematic glow-primary">
-                            {isSubmitting ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Saving...
-                              </>
-                            ) : (
-                              "Save"
-                            )}
-                          </Button>
+                        {/* EDIT MODE */}
+                        <div
+                          className={`transition-opacity duration-300 ${isEditing ? "opacity-100" : "opacity-0 pointer-events-none h-0"
+                            }`}
+                        >
+                          <Label className="text-sm font-medium mb-2 block">Rate this movie</Label>
+                          <StarRating value={ratingValue} setValue={setRatingValue} />
+
+                          <div className="mt-4">
+                            <Label className="text-sm font-medium mb-2 block">Your Review (optional)</Label>
+                            <textarea
+                              rows={3}
+                              value={reviewText}
+                              onChange={(e) => setReviewText(e.target.value)}
+                              className="w-full bg-zinc-800 border border-gray-700 rounded-lg p-3 text-sm text-gray-200 outline-none resize-none"
+                              placeholder="Write your thoughts..."
+                            />
+                          </div>
+
+                          <div className="flex justify-end gap-3 mt-4">
+                            <Button variant="secondary" onClick={handleCancel} disabled={isSubmitting}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleSave} disabled={isSubmitting} className="gradient-cinematic glow-primary">
+                              {isSubmitting ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Saving...
+                                </>
+                              ) : (
+                                "Save"
+                              )}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
 
         {/* Confirm watchlist modal */}
         {showConfirmWatchlist && pendingWatchlistNext === "watchlist" && (
-          <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
-            <div className="bg-zinc-900 text-white rounded-xl p-5 w-[90%] sm:w-[420px] shadow-xl">
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 rounded-lg">
+            <div className="bg-zinc-900 text-white rounded-xl p-5 w-[90%] sm:w-[420px] shadow-xl border border-zinc-700">
               <h4 className="text-lg font-semibold mb-2">Remove rating & move to Watchlist?</h4>
               <p className="text-sm text-gray-300 mb-4">
                 Moving this movie to your Watchlist will remove your existing rating and review.
@@ -535,8 +533,8 @@ const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 

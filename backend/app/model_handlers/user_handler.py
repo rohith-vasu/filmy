@@ -13,12 +13,14 @@ class UserCreate(BaseModel):
     firstname: str = Field(..., description="User's firstname")
     lastname: str = Field(..., description="User's lastname")
     hashed_password: str = Field(..., description="User's password")
+    genre_preferences: Optional[str] = Field(None, description="User's genre preferences")
 
 class UserUpdate(BaseModel):
     email: Optional[str] = Field(None, description="User's email address")
     firstname: Optional[str] = Field(None, description="User's firstname")
     lastname: Optional[str] = Field(None, description="User's lastname")
     hashed_password: Optional[str] = Field(None, description="User's password")
+    genre_preferences: Optional[str] = Field(None, description="User's genre preferences")
 
 class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -28,6 +30,7 @@ class UserResponse(BaseModel):
     firstname: str = Field(..., description="User's firstname")
     lastname: str = Field(..., description="User's lastname")
     hashed_password: Optional[str] = Field(None, description="User's password")
+    genre_preferences: Optional[str] = Field(None, description="User's genre preferences")
     created_at: datetime = Field(..., description="Timestamp of user creation")
 
 
@@ -62,3 +65,7 @@ class UserHandler(CRUDManager[User, UserCreate, UserUpdate, UserResponse]):
             return UserResponse(**user_data)
         except NoResultFound:
             return None
+
+    def get_by_id(self, id: int) -> UserResponse:
+        user = self._db.query(User).filter(User.id == id).one()
+        return self._response_schema.model_validate(user)

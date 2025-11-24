@@ -1,10 +1,11 @@
+// src/components/DeleteAccountModal.tsx
 import { useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import api from "@/lib/api";
+import { authAPI } from "@/lib/api";
 
 interface DeleteAccountModalProps {
   open: boolean;
@@ -12,11 +13,12 @@ interface DeleteAccountModalProps {
 }
 
 export function DeleteAccountModal({ open, onOpenChange }: DeleteAccountModalProps) {
-  const { user, logout } = useAuthStore();
+  const { user, setUser, logout } = useAuthStore();
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleDelete = async () => {
+    if (!user) return toast.error("No user found");
     if (text !== "DELETE") {
       toast.error("Type DELETE to confirm");
       return;
@@ -24,9 +26,23 @@ export function DeleteAccountModal({ open, onOpenChange }: DeleteAccountModalPro
 
     try {
       setLoading(true);
-      await api.delete(`/users/${user!.id}`);
-      toast.success("Account deleted");
-      logout();
+      const res = await authAPI.deleteAccount(user.id);
+
+      // backend returns 204 No Content -> res.status === 204
+      if (res.status === 204) {
+        toast.success("Account deleted");
+      } else {
+        // if backend returns AppResponse with message
+        const msg = res.data?.message ?? "Account deleted";
+        toast.success(msg);
+      }
+
+      // clear client state
+      await logout();
+      setUser(null);
+      onOpenChange(false);
+
+      // navigate to root (optional)
       window.location.href = "/";
     } catch (err: any) {
       toast.error(err.response?.data?.detail || "Failed to delete account");
@@ -52,15 +68,12 @@ export function DeleteAccountModal({ open, onOpenChange }: DeleteAccountModalPro
 
         <Input value={text} onChange={(e) => setText(e.target.value)} />
 
-        <Button 
-          variant="destructive" 
-          className="w-full mt-4"
-          disabled={loading}
-          onClick={handleDelete}
-        >
+        <Button variant="destructive" className="w-full mt-4" disabled={loading} onClick={handleDelete}>
           {loading ? "Deleting..." : "Delete Account"}
         </Button>
       </DialogContent>
     </Dialog>
   );
 }
+
+export default DeleteAccountModal;

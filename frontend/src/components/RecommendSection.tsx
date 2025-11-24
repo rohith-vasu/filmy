@@ -9,7 +9,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import MovieCard from "./MovieCard";
@@ -19,15 +19,10 @@ import type { MovieDB } from "@/types";
 
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
-const GENRES = [
-  "Action", "Adventure", "Animation", "Comedy", "Crime",
-  "Documentary", "Drama", "Family", "Fantasy", "History",
-  "Horror", "Music", "Mystery", "Romance", "Sci-Fi",
-  "Thriller", "War", "Western",
-];
+import { GENRES } from "@/lib/constants";
 
 const RecommendSection = () => {
-  const [mode, setMode] = useState<"genre" | "similar">("genre"); // ✅ default = genre
+  const [mode, setMode] = useState<"genre" | "similar">("genre");
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [movieNames, setMovieNames] = useState<string>("");
   const [recommendations, setRecommendations] = useState<MovieDB[]>([]);
@@ -38,6 +33,12 @@ const RecommendSection = () => {
     setSelectedGenres((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      getRecommendations();
+    }
   };
 
   const getRecommendations = async () => {
@@ -81,7 +82,7 @@ const RecommendSection = () => {
           release_year: m.release_year ? `${m.release_year}` : "",
           poster_url: m.poster_path
             ? `${TMDB_IMAGE_BASE}${m.poster_path}`
-            : "/placeholder-movie.jpg",
+            : "/poster-not-found.png",
         }));
 
         setRecommendations(formatted);
@@ -102,8 +103,10 @@ const RecommendSection = () => {
   };
 
   return (
-    <section className="py-20 relative overflow-visible">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-20 relative overflow-hidden">
+      {/* Background Glow removed - moved to Index.tsx */}
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-12 animate-fade-up">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4">
@@ -122,9 +125,8 @@ const RecommendSection = () => {
               setMode("genre");
               setMovieNames("");
             }}
-            className={`rounded-full px-6 text-base transition-all duration-300 ${
-              mode === "genre" ? "bg-primary text-white scale-105 shadow-lg" : ""
-            }`}
+            className={`rounded-full px-6 text-base transition-all duration-300 ${mode === "genre" ? "bg-primary text-primary-foreground scale-105 shadow-lg" : ""
+              }`}
           >
             🎭 By Genre
           </Button>
@@ -135,7 +137,7 @@ const RecommendSection = () => {
               setMode("similar");
               setSelectedGenres([]);
             }}
-            className={`rounded-full px-6 text-base ${mode === "similar" ? "bg-primary text-white" : ""}`}
+            className={`rounded-full px-6 text-base ${mode === "similar" ? "bg-primary text-primary-foreground" : ""}`}
           >
             🎥 By Similar Movies
           </Button>
@@ -153,11 +155,10 @@ const RecommendSection = () => {
                     key={genre}
                     type="button"
                     variant={selectedGenres.includes(genre) ? "default" : "outline"}
-                    className={`rounded-full text-sm ${
-                      selectedGenres.includes(genre)
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground"
-                    }`}
+                    className={`rounded-full text-sm ${selectedGenres.includes(genre)
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground"
+                      }`}
                     onClick={() => toggleGenre(genre)}
                   >
                     {genre}
@@ -177,6 +178,7 @@ const RecommendSection = () => {
                 placeholder="e.g., Interstellar, Inception"
                 value={movieNames}
                 onChange={(e) => setMovieNames(e.target.value)}
+                onKeyDown={handleKeyDown}
                 className="bg-background border-border"
               />
             </div>
@@ -188,8 +190,17 @@ const RecommendSection = () => {
               disabled={isLoading}
               className="mt-8 w-full gradient-cinematic glow-primary text-lg py-6"
             >
-              <Sparkles className="w-5 h-5 mr-2" />
-              {isLoading ? "Finding the best movies..." : "✨ Get Recommendations"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Finding the best movies...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  ✨ Get Recommendations
+                </>
+              )}
             </Button>
           )}
         </div>

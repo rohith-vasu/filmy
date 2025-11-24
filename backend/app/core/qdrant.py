@@ -14,7 +14,7 @@ class Qdrant:
         )
 
         # Sentence-transformer for movie embeddings
-        self.embedding_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+        self.embedding_model = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
         self.collection_name = settings.qdrant.collection
 
         # Ensure the collection exists
@@ -24,15 +24,20 @@ class Qdrant:
     # Collection Management
     # --------------------------
     def _ensure_collection(self):
-        """Ensure the Qdrant collection for movies exists."""
+        """Ensure the Qdrant collection for movies exists and has correct config."""
         try:
-            self.client.get_collection(self.collection_name)
-            logger.info(f"✅ Qdrant collection '{self.collection_name}' already exists.")
+            collection_info = self.client.get_collection(self.collection_name)
+            if collection_info.config.params.vectors.size != 768:
+                logger.warning(f"⚠️ Collection '{self.collection_name}' has incorrect vector size. Recreating...")
+                self.client.delete_collection(self.collection_name)
+                raise Exception("Collection deleted due to config mismatch")
+            
+            logger.info(f"✅ Qdrant collection '{self.collection_name}' exists with correct config.")
         except Exception:
             logger.info(f"⚙️ Creating Qdrant collection '{self.collection_name}'...")
             self.client.create_collection(
                 collection_name=self.collection_name,
-                vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
+                vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE),
                 on_disk_payload=True,
             )
 
@@ -110,55 +115,59 @@ class Qdrant:
         self,
         query: Optional[str] = None,
         movie_vector: Optional[np.ndarray] = None,
-        limit: int = 10,
+        top: int = 10,
         filters: Optional[Dict] = None,
-    ) -> List[Dict]:
-        """
-        Search similar movies in Qdrant using either:
-        - query text (semantic search)
-        - existing movie vector (similar movie search)
-        Optional metadata filters (e.g., genres, year, runtime).
-        """
+    ):
         if query:
             vector = self.embedding_model.encode(query, normalize_embeddings=True)
         elif movie_vector is not None:
             vector = movie_vector
         else:
-            raise ValueError("Either 'query' or 'movie_vector' must be provided.")
+            raise ValueError("Either query or movie_vector must be provided.")
 
         qdrant_filter = None
         if filters:
-            must_conditions = []
+            must = []
+
             for key, val in filters.items():
-                # 🎭 List filter (genres)
+
+                # LIST MATCH (genres, language)
                 if isinstance(val, list):
-                    must_conditions.append(
-                        models.FieldCondition(key=key, match=models.MatchAny(any=val))
+                    must.append(
+                        models.FieldCondition(
+                            key=key,
+                            match=models.MatchAny(any=val)
+                        )
                     )
-                # 🔢 Range filter (runtime, release_year, etc.)
-                elif isinstance(val, dict) and any(k in val for k in ["gte", "lte"]):
-                    must_conditions.append(
+
+                # RANGE MATCH (release_year)
+                elif isinstance(val, dict) and ("gte" in val or "lte" in val):
+                    must.append(
                         models.FieldCondition(
                             key=key,
                             range=models.Range(
                                 gte=val.get("gte"),
-                                lte=val.get("lte")
+                                lte=val.get("lte"),
                             )
                         )
                     )
-                # 🔤 Single value filter
+
+                # EXACT MATCH
                 else:
-                    must_conditions.append(
-                        models.FieldCondition(key=key, match=models.MatchValue(value=val))
+                    must.append(
+                        models.FieldCondition(
+                            key=key,
+                            match=models.MatchValue(value=val)
+                        )
                     )
 
-            qdrant_filter = models.Filter(must=must_conditions)
+            qdrant_filter = models.Filter(must=must)
 
         results = self.client.search(
             collection_name=self.collection_name,
             query_vector=vector,
-            # query_filter=qdrant_filter,
-            limit=limit,
+            query_filter=qdrant_filter,
+            limit=top,
         )
 
         return [
@@ -167,12 +176,14 @@ class Qdrant:
                 "title": r.payload["title"],
                 "genres": r.payload.get("genres"),
                 "release_year": r.payload.get("release_year"),
-                "popularity": r.payload.get("popularity"),
+                "language": r.payload.get("language"),
                 "poster_path": r.payload.get("poster_path"),
+                "popularity": r.payload.get("popularity"),
                 "score": r.score,
             }
             for r in results
         ]
+
 
 
 # -----------------------------

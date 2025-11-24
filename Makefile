@@ -64,3 +64,8 @@ logs:
 # Show container status
 ps:
 	$(DC) ps
+
+# Train implicit model
+.PHONY: train-model
+train-model:
+	cd backend && .venv/bin/python3 -m app.ml.pipelines.implicit_train

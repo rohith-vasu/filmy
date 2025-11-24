@@ -16,6 +16,8 @@ class MovieCreate(BaseModel):
     overview: Optional[str] = None
     genres: Optional[str] = Field(default_factory="")
     original_language: Optional[str] = None
+    tagline: Optional[str] = None
+    keywords: Optional[str] = None
     runtime: Optional[int] = None
     popularity: Optional[float] = None
     poster_path: Optional[str] = None
@@ -28,6 +30,8 @@ class MovieUpdate(BaseModel):
     overview: Optional[str] = None
     genres: Optional[str] = Field(default_factory="")
     original_language: Optional[str] = None
+    tagline: Optional[str] = None
+    keywords: Optional[str] = None
     runtime: Optional[int] = None
     popularity: Optional[float] = None
     poster_path: Optional[str] = None
@@ -43,6 +47,8 @@ class MovieResponse(BaseModel):
     overview: Optional[str]
     genres: Optional[str]
     original_language: Optional[str]
+    tagline: Optional[str]
+    keywords: Optional[str]
     runtime: Optional[int]
     popularity: Optional[float]
     poster_path: Optional[str]
@@ -74,7 +80,8 @@ class MovieHandler(CRUDManager[Movie, MovieCreate, MovieUpdate, MovieResponse]):
     def get_by_title(self, title: str) -> Optional[MovieResponse]:
         """Retrieve a movie by title."""
         try:
-            movie = self._db.query(Movie).filter(Movie.title.ilike(f"%{title}%")).first()
+            # movie = self._db.query(Movie).filter(Movie.title.ilike(f"{title}%")).first()
+            movie = self._db.query(Movie).filter(Movie.title.ilike(title)).first()
             return MovieResponse.model_validate(movie) if movie else None
         except NoResultFound:
             return None
@@ -82,6 +89,11 @@ class MovieHandler(CRUDManager[Movie, MovieCreate, MovieUpdate, MovieResponse]):
     def get_by_tmdb_id(self, tmdb_id: int) -> Optional[MovieResponse]:
         """Retrieve a movie by TMDB ID."""
         movie = self._db.query(Movie).filter(Movie.tmdb_id == tmdb_id).first()
+        return MovieResponse.model_validate(movie) if movie else None
+
+    def get_by_id(self, id: int) -> Optional[MovieResponse]:
+        """Return SQLAlchemy movie model object."""
+        movie = self._db.query(Movie).filter(Movie.id == id).first()
         return MovieResponse.model_validate(movie) if movie else None
 
     def get_by_genres(self, genres: List[str], limit: int = 10) -> List[MovieResponse]:
@@ -97,44 +109,46 @@ class MovieHandler(CRUDManager[Movie, MovieCreate, MovieUpdate, MovieResponse]):
             )
         return [MovieResponse.model_validate(m) for m in movies]
 
-    def get_by_id_raw(self, id: int):
-        """Return SQLAlchemy movie model object."""
-        return self._db.query(Movie).filter(Movie.id == id).first()
-
 
     def query_movies_paginated(
         self,
         page: int,
         limit: int,
-        search: Optional[str],
+        title: Optional[str],
         genre: Optional[str],
         language: Optional[str],
         release_year: Optional[int],
         sort_by: str,
         order: str,
+        search_bar: bool = False,
     ):
         query = self._db.query(Movie)
 
         # ----- Search -----
-        if search:
-            pattern = f"%{search}%"
+        if title:
+            # When title is provided, ignore all other filters
+            pattern = f"%{title}%" if search_bar else f"{title}%"
             query = query.filter(
-                Movie.title.ilike(pattern) |
-                Movie.overview.ilike(pattern)
+                Movie.title.ilike(pattern)
             )
 
-        # ----- Genre Filter -----
-        if genre:
-            genres_list = [g.strip() for g in genre.split(",")]
-            for g in genres_list:
-                query = query.filter(Movie.genres.ilike(f"%{g}%"))
+        else:
+            # ----- Genre Filter -----
+            if genre:
+                genres_list = [g.strip() for g in genre.split(",")]
+                # Use OR logic for genres (match ANY of the selected genres)
+                query = query.filter(
+                    or_(*[Movie.genres.ilike(f"%{g}%") for g in genres_list])
+                )
 
-        # ----- Other Filters -----
-        if language:
-            query = query.filter(Movie.original_language == language)
+            # ----- Other Filters -----
+            if language:
+                # Language comes as comma-separated string, split it
+                languages_list = [l.strip() for l in language.split(",")]
+                query = query.filter(Movie.original_language.in_(languages_list))
 
-        if release_year:
-            query = query.filter(Movie.release_year == release_year)
+            if release_year:
+                query = query.filter(Movie.release_year == release_year)
 
         # ----- Sorting -----
         sort_map = {

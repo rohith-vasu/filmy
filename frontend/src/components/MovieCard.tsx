@@ -3,12 +3,14 @@ import { MovieDB } from "@/types/index";
 
 interface MovieCardProps {
   movie: Movie | MovieDB;
+  onClick?: () => void;
 }
 
-const MovieCard = ({ movie }: MovieCardProps) => {
+const MovieCard = ({ movie, onClick }: MovieCardProps) => {
   return (
     <div
       className="relative group cursor-pointer rounded-xl overflow-hidden transition-all duration-300 transform hover:scale-105 hover:-translate-y-2 shadow-md hover:shadow-xl"
+      onClick={onClick}
     >
       {/* Poster */}
       <div className="relative aspect-[2/3] overflow-hidden bg-secondary">
@@ -17,6 +19,10 @@ const MovieCard = ({ movie }: MovieCardProps) => {
           alt={movie.title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
           loading="lazy"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = "/poster-not-found.png";
+          }}
         />
 
         {/* Gradient Overlay */}

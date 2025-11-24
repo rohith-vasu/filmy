@@ -13,6 +13,7 @@ import { useAuthStore } from "@/stores/authStore";
 const Login = () => {
   const navigate = useNavigate();
   const setUser = useAuthStore((s) => s.setUser);
+  const openRegisterPrompt = useAuthStore((s) => s.openRegisterPrompt);
   const [loading, setLoading] = useState(false);
 
   const form = useForm<LoginSchemaType>({
@@ -20,28 +21,20 @@ const Login = () => {
     mode: "onBlur",
   });
 
-  const redirectToRegister = () => {
-    toast.error("User not found. Redirecting to sign up...", { duration: 2500 });
-
-    setTimeout(() => {
-      // Clear user ONLY when redirecting
-      useAuthStore.getState().setUser(null);
-      navigate("/register");
-    }, 2500);
-  };
-
   const onSubmit = async (data: LoginSchemaType) => {
     try {
       setLoading(true);
 
       const res = await authAPI.login(data.email, data.password);
 
-      // Backend returned a handled error
-      if (res.status !== "success") {
-        const msg = res.message?.toLowerCase() || "";
+      // Backend returned an explicit handled error
+      if (res?.status && res.status !== "success") {
+        const msg = String(res.message || "").toLowerCase();
 
-        if (msg.includes("user not found")) {
-          return redirectToRegister();
+        if (msg.includes("user not found") || msg.includes("not found")) {
+          // Show register modal (ShadCN)
+          openRegisterPrompt();
+          return;
         }
 
         toast.error(res.message || "Invalid login credentials");
@@ -50,7 +43,7 @@ const Login = () => {
 
       // Successful login → fetch user profile
       const userRes = await authAPI.getCurrentUser();
-      const u = userRes.data;
+      const u = userRes.data || userRes;
 
       setUser({
         id: u.id,
@@ -62,10 +55,11 @@ const Login = () => {
       toast.success(`Welcome back, ${u.firstname}`);
       navigate("/dashboard");
     } catch (err: any) {
-      const detail = err.response?.data?.detail?.toLowerCase() || "";
+      const detail = String(err?.response?.data?.detail || "").toLowerCase();
 
       if (detail.includes("user not found")) {
-        return redirectToRegister();
+        openRegisterPrompt();
+        return;
       }
 
       toast.error("Login failed");
@@ -75,8 +69,12 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background Glow - matching hero section */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/5 to-background" />
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/10 blur-3xl animate-glow-pulse" />
+
+      <div className="w-full max-w-md relative z-10">
 
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
@@ -91,7 +89,7 @@ const Login = () => {
           </p>
 
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            
+
             {/* Email */}
             <div>
               <Label>Email</Label>

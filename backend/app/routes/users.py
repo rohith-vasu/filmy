@@ -68,7 +68,7 @@ async def change_password(
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     
     hashed_new = hash_password(new_password)
-    user_handler.update(user.id, UserUpdate(password=hashed_new))
+    user_handler.update(user.id, UserUpdate(hashed_password=hashed_new))
     
     return AppResponse(
         status="success",
@@ -90,9 +90,6 @@ async def delete_user(
     # Only allow deleting own account
     if user.id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-
-    qdrant_client = get_qdrant_client()
-    qdrant_client.delete_collection(collection_name=user_id)
 
     # Delete all sessions and documents associated with the user
     user_handler.delete(user_id)

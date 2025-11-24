@@ -10,3 +10,12 @@ wheels/
 .venv
 
 .env
+
+data/languages.json
+data/missing_release_dates.json
+data/missing_release_ids.json
+data/movie_metadata.parquet
+data/movie_embeddings.npy
+
+
+mlruns

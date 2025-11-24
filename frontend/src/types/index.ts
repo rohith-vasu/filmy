@@ -3,6 +3,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
+  genre_preferences?: string;
 }
 
 export interface Movie {

@@ -12,6 +12,7 @@ class User(Base):
     lastname = Column(String(100), nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     hashed_password = Column(String(72), nullable=False)
+    genre_preferences = Column(String(255), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
