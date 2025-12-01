@@ -295,6 +295,7 @@ export const recommendationsAPI = {
 
 export const userAPI = {
   stats: () => api.get("/feedbacks/stats"),
+  getWatchlist: () => api.get("/feedbacks/watchlist"),
 };
 
 export default api;

@@ -1,5 +1,8 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+import threading
+
+from app.model_state import load_model, model_watcher_thread
 from app.routes.auth import auth_router
 from app.routes.users import user_router
 from app.routes.user_feedback import user_feedback_router
@@ -32,3 +35,13 @@ app.include_router(recommendation_router)
 app.include_router(user_feedback_router, dependencies=[Depends(get_current_user)])
 
 
+@app.on_event("startup")
+def startup_event():
+    print("🚀 Starting FastAPI and loading ALS model...")
+    load_model()
+
+    # Background daily refresh thread
+    thread = threading.Thread(target=model_watcher_thread, daemon=True)
+    thread.start()
+
+    print("⚡ Background model watcher running.")

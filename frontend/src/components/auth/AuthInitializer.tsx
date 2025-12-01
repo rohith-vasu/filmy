@@ -1,7 +1,7 @@
 // src/components/auth/AuthInitializer.tsx
 import { useEffect } from "react";
 import { useAuthStore } from "@/stores/authStore";
-import { refreshAccessToken } from "@/lib/TokenManager";
+import { refreshAccessToken } from "@/lib/tokenManager";
 
 export const AuthInitializer = () => {
   const fetchUser = useAuthStore((s) => s.fetchUser);

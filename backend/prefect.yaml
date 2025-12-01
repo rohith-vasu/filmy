@@ -1,0 +1,28 @@
+version: 3.0
+
+project:
+  name: filmy
+
+# No build, no push, no git clone
+build: []
+push: []
+pull:
+  - prefect.deployments.steps.set_working_directory:
+      directory: "/app"
+
+deployments:
+  - name: filmy-ingest
+    flow_name: ingest_flow
+    entrypoint: app/pipelines/prefect/ingest_flow.py:run_ingest
+    pool: filmy-pool
+    schedule:
+      cron: "0 4 * * *"
+      timezone: "Europe/Berlin"
+
+  - name: filmy-training
+    flow_name: training_flow
+    entrypoint: app/pipelines/prefect/training_flow.py:run_train
+    pool: filmy-pool
+    schedule:
+      cron: "0 4 * * *"
+      timezone: "Europe/Berlin"

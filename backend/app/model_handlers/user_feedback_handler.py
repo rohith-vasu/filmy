@@ -8,6 +8,9 @@ from . import CRUDManager
 from app.models.user_feedback import UserFeedback
 
 
+from app.model_handlers.movie_handler import MovieResponse
+from sqlalchemy.orm import joinedload
+
 # ---------- Pydantic Schemas ----------
 class UserFeedbackCreate(BaseModel):
     user_id: Optional[int] = Field(None, description="User ID providing feedback")
@@ -31,6 +34,7 @@ class UserFeedbackResponse(BaseModel):
     rating: Optional[float]
     review: Optional[str]
     status: Optional[str]
+    movie: Optional[MovieResponse] = None
 
 
 # ---------- Handler ----------
@@ -78,6 +82,7 @@ class UserFeedbackHandler(CRUDManager[UserFeedback, UserFeedbackCreate, UserFeed
         try:
             feedback = (
                 self._db.query(UserFeedback)
+                .options(joinedload(UserFeedback.movie))
                 .filter(UserFeedback.user_id == user_id, UserFeedback.movie_id == movie_id)
                 .first()
             )
@@ -87,12 +92,28 @@ class UserFeedbackHandler(CRUDManager[UserFeedback, UserFeedbackCreate, UserFeed
 
     def get_user_feedbacks(self, user_id: int) -> List[UserFeedbackResponse]:
         """List all feedbacks given by a user."""
-        feedbacks = self._db.query(UserFeedback).filter(UserFeedback.user_id == user_id).all()
+        feedbacks = (
+            self._db.query(UserFeedback)
+            .options(joinedload(UserFeedback.movie))
+            .filter(UserFeedback.user_id == user_id)
+            .order_by(UserFeedback.updated_at.desc())
+            .all()
+        )
         return [UserFeedbackResponse.model_validate(fb) for fb in feedbacks]
 
     def get_movie_feedbacks(self, movie_id: int) -> List[UserFeedbackResponse]:
         """List all feedbacks for a movie."""
         feedbacks = self._db.query(UserFeedback).filter(UserFeedback.movie_id == movie_id).all()
+        return [UserFeedbackResponse.model_validate(fb) for fb in feedbacks]
+
+    def get_user_watchlist(self, user_id: int) -> List[UserFeedbackResponse]:
+        """List all movies in user's watchlist."""
+        feedbacks = (
+            self._db.query(UserFeedback)
+            .options(joinedload(UserFeedback.movie))
+            .filter(UserFeedback.user_id == user_id, UserFeedback.status == "watchlist")
+            .all()
+        )
         return [UserFeedbackResponse.model_validate(fb) for fb in feedbacks]
 
     def get_user_stats(self, user_id: int, movie_handler) -> dict:
@@ -138,3 +159,4 @@ class UserFeedbackHandler(CRUDManager[UserFeedback, UserFeedbackCreate, UserFeed
             "watched_this_month": watched_this_month,
             "watched_this_year": watched_this_year,
         }
+        

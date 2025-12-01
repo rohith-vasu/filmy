@@ -21,6 +21,7 @@ export default function Dashboard() {
   const { stats, fetchStats } = useStatsStore();
   const [personalized, setPersonalized] = useState<MovieDB[]>([]);
   const [recentActivityRecs, setRecentActivityRecs] = useState<MovieDB[]>([]);
+  const [watchlist, setWatchlist] = useState<MovieDB[]>([]);
 
   const [selectedTmdbId, setSelectedTmdbId] = useState<number | null>(null);
 
@@ -99,6 +100,33 @@ export default function Dashboard() {
     fetchRecent();
   }, []);
 
+  // ------------------------------------
+  // Watchlist
+  // ------------------------------------
+  const fetchWatchlist = async () => {
+    try {
+      const res = await userAPI.getWatchlist();
+      if (res.data?.status === "success") {
+        setWatchlist(
+          res.data.data.map((m: any) => ({
+            id: m.id,
+            tmdbId: m.movie?.tmdb_id || m.tmdb_id,
+            title: m.title || m.movie?.title, // if joined
+            overview: m.overview || m.movie?.overview || "",
+            genres: Array.isArray(m.genres) ? m.genres.join(", ") : m.genres ?? "",
+            poster_url: m.poster_path ? `${TMDB_IMAGE_BASE}${m.poster_path}` : (m.movie?.poster_path ? `${TMDB_IMAGE_BASE}${m.movie.poster_path}` : "/poster-not-found.png"),
+            release_year: m.release_year || m.movie?.release_year || "",
+            popularity: m.popularity || m.movie?.popularity
+          }))
+        );
+      }
+    } catch { }
+  };
+
+  useEffect(() => {
+    fetchWatchlist();
+  }, []);
+
   const handleMoreLikeThis = (movie: MovieDB) => {
     setMoreLikeThisMovie({ id: movie.id, title: movie.title });
     setMoreLikeThisOpen(true);
@@ -162,7 +190,6 @@ export default function Dashboard() {
           {personalized.length > 0 && (
             <section className="mb-12">
               <div className="flex items-center gap-2 mb-6">
-                <Sparkles className="w-6 h-6 text-primary" />
                 <h2 className="text-3xl font-heading font-bold">Movies For You</h2>
               </div>
 
@@ -220,19 +247,55 @@ export default function Dashboard() {
                 <CarouselNext className="hidden sm:flex" />
               </Carousel>
             </section>
+
+          )}
+
+          {/* -----------------------------------------------------
+               Your Watchlist
+          ------------------------------------------------------ */}
+          {watchlist.length > 0 && (
+            <section className="mb-12">
+              <h2 className="text-3xl font-heading font-bold mb-6">
+                Your Watchlist
+              </h2>
+
+              <Carousel
+                opts={{ align: "start", loop: true }}
+                plugins={[Autoplay({ delay: 3500, stopOnInteraction: false, stopOnMouseEnter: true })]}
+                className="w-full"
+              >
+                <CarouselContent>
+                  {watchlist.map((m) => (
+                    <CarouselItem key={m.id} className="basis-1/2 sm:basis-1/3 md:basis-1/5 px-4">
+                      <DashboardMovieCard
+                        movie={m}
+                        onClick={() => setSelectedTmdbId(m.tmdbId)}
+                        onMoreLikeThis={() => handleMoreLikeThis(m)}
+                      />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+
+                <CarouselPrevious className="hidden sm:flex" />
+                <CarouselNext className="hidden sm:flex" />
+              </Carousel>
+            </section>
           )}
         </div>
-      </main>
+      </main >
 
       <Footer />
 
       {/* Movie Modal */}
-      {selectedTmdbId && (
-        <MovieModal
-          tmdbId={selectedTmdbId}
-          onClose={() => setSelectedTmdbId(null)}
-        />
-      )}
+      {
+        selectedTmdbId && (
+          <MovieModal
+            tmdbId={selectedTmdbId}
+            onClose={() => setSelectedTmdbId(null)}
+            onWatchlistUpdate={fetchWatchlist}
+          />
+        )
+      }
 
       {/* More Like This Modal */}
       <MoreLikeThisModal
@@ -241,7 +304,7 @@ export default function Dashboard() {
         id={moreLikeThisMovie?.id ?? null}
         movieTitle={moreLikeThisMovie?.title ?? ""}
       />
-    </div>
+    </div >
   );
 }
 

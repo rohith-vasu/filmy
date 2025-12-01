@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Type, TypeVar, List
+from typing import Type, TypeVar, List, Generic
 
 from fastapi import HTTPException
 from pydantic import BaseModel
@@ -13,7 +13,7 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 ResponseSchemaType = TypeVar("ResponseSchemaType", bound=BaseModel)
 
 
-class CRUDManager[SqlModelType, CreateSchemaType, UpdateSchemaType, ResponseSchemaType]:
+class CRUDManager(Generic[SqlModelType, CreateSchemaType, UpdateSchemaType, ResponseSchemaType]):
     def __init__(
         self, db: Session, model: Type[SqlModelType], response_schema: Type[BaseModel]
     ):

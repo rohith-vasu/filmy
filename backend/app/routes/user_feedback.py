@@ -90,6 +90,23 @@ async def get_user_stats(
         data=stats,
     )
 
+@user_feedback_router.get("/watchlist", response_model=AppResponse)
+async def get_user_watchlist(
+    db: Session = Depends(get_global_db_session),
+    current_user: UserResponse = Depends(get_current_user),
+):  
+    """
+    Get all movies in user's watchlist.
+    """
+    handler = UserFeedbackHandler(db)
+    watchlist = handler.get_user_watchlist(current_user.id)
+
+    return AppResponse(
+        status="success",
+        message="User watchlist fetched successfully",
+        data=watchlist,
+    )
+
 
 @user_feedback_router.get("/{movie_id}", response_model=AppResponse)
 async def get_my_feedback_for_movie(

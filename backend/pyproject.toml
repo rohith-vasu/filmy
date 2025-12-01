@@ -3,23 +3,28 @@ name = "backend"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11,<3.12"
 dependencies = [
     "bcrypt==4.3.0",
-    "dvc>=3.64.0",
+    "boto3<1.39",
+    "certifi>=2025.10.5",
+    "dvc[s3]>=3.64.0",
     "dynaconf>=3.2.12",
     "faker>=38.2.0",
     "fastapi>=0.121.1",
     "implicit>=0.7.2",
     "loguru>=0.7.3",
+    "minio>=7.2.19",
     "mlflow>=3.6.0",
     "pandas>=2.3.3",
     "passlib>=1.7.4",
+    "prefect>=3.6.4",
     "psycopg2-binary>=2.9.11",
     "pyarrow>=22.0.0",
     "python-jose>=3.5.0",
     "python-multipart>=0.0.20",
-    "qdrant-client>=1.15.1",
+    "qdrant-client==1.15.1",
+    "requests>=2.32.5",
     "sentence-transformers>=5.1.2",
     "sqlalchemy>=2.0.44",
     "sqlmodel>=0.0.27",

@@ -1,5 +1,29 @@
--- DATABASE INITIALIZATION SCRIPT FOR FILMY
+-- =========================================
+-- CREATE DATABASES
+-- =========================================
 
+-- MLflow tracking database
+CREATE DATABASE mlflow_db;
+
+-- Prefect database
+CREATE DATABASE prefect;
+
+-- MLflow DB user
+CREATE USER mlflow WITH PASSWORD 'mlflow';
+GRANT ALL PRIVILEGES ON DATABASE mlflow_db TO mlflow;
+GRANT ALL PRIVILEGES ON DATABASE mlflow_db TO filmy;
+
+-- Prefect DB user
+CREATE USER prefect WITH PASSWORD 'prefect';
+GRANT ALL PRIVILEGES ON DATABASE prefect TO prefect;
+GRANT ALL PRIVILEGES ON DATABASE prefect TO filmy;
+
+-- =========================================
+-- SCHEMA FOR filmy_db
+-- =========================================
+\c filmy_db;
+
+-- Movies table
 CREATE TABLE IF NOT EXISTS movies (
     id SERIAL PRIMARY KEY,
     tmdb_id BIGINT UNIQUE NOT NULL,
@@ -17,6 +41,7 @@ CREATE TABLE IF NOT EXISTS movies (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Users table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     firstname TEXT NOT NULL,
@@ -28,6 +53,7 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- User feedback table
 CREATE TABLE IF NOT EXISTS user_feedback (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(id) ON DELETE CASCADE,
@@ -38,16 +64,4 @@ CREATE TABLE IF NOT EXISTS user_feedback (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_user_movie UNIQUE (user_id, movie_id)
-);
-
-CREATE TABLE IF NOT EXISTS models (
-    id SERIAL PRIMARY KEY,
-    version TEXT,
-    trained_on TIMESTAMP,
-    dataset_version TEXT,
-    metrics JSONB,
-    status TEXT,
-    model_path TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

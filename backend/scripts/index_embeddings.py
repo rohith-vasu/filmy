@@ -13,7 +13,7 @@ META_FILE = "data/movie_metadata.parquet"
 QDRANT_URL = "http://localhost:6333"
 COLLECTION = "movies"
 
-BATCH_SIZE = 1000
+BATCH_SIZE = 500
 
 # -------------------------
 # LOAD DATA

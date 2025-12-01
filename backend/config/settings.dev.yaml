@@ -21,3 +21,21 @@ development:
     collection: 'movies'
     search_limit: 5
     scroll_limit: 10
+
+  mlflow:
+    experiment: "filmy_implicit_training"
+    factors: 128
+    regularization: 0.05
+    alpha: 30.0
+    epochs: 30
+    
+  minio:
+    endpoint: 'localhost:9000'
+    data_bucket: 'filmy-data'
+  
+  dvc:
+    remote: 'minio'
+
+  tmdb:
+    base_url: 'https://api.themoviedb.org/3'
+    

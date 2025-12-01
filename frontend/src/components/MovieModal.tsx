@@ -19,6 +19,7 @@ interface MovieModalProps {
   id?: number;
   tmdbId: number;
   onClose: () => void;
+  onWatchlistUpdate?: () => void;
 }
 
 /** StarRating Component */
@@ -106,7 +107,7 @@ const StarRating = ({
 };
 
 /** MovieModal */
-const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
+const MovieModal = ({ id: propId, tmdbId, onClose, onWatchlistUpdate }: MovieModalProps) => {
   const { isAuthenticated } = useAuthStore();
   const { fetchStats } = useStatsStore();
 
@@ -256,11 +257,12 @@ const MovieModal = ({ id: propId, tmdbId, onClose }: MovieModalProps) => {
 
       toast.success(
         next === "watchlist"
-          ? "Added to Watchlist (rating removed)"
+          ? "Added to Watchlist"
           : "Removed from Watchlist"
       );
 
       fetchStats();
+      onWatchlistUpdate?.();
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || "Failed to update watchlist");
       setStatus((prev) => (prev === "watchlist" ? "none" : "watchlist"));

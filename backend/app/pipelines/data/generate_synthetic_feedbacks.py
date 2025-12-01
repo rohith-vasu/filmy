@@ -1,24 +1,9 @@
-#!/usr/bin/env python3
-"""
-generate_synthetic_v6.py — Option C (direct DB, improved signal)
-
-Improvements vs v5:
-- Much smaller inter-cluster overlap (default 10%)
-- Strong, explicit cluster genre identities derived from DB
-- Lower per-user interaction counts (10-40, avg ~25)
-- Reduced global popularity sampling (few random pop picks)
-- Tail fraction increased slightly to preserve long tail
-- Evaluation-friendly (no sequential assumptions)
-- Keeps robust bulk insert fallback
-
-Run from backend/:
-PYTHONPATH=. python3 scripts/generate_synthetic_v6.py
-"""
 import os
 import sys
 import random
 import math
 import time
+import json
 from collections import Counter, defaultdict
 from faker import Faker
 from tqdm import tqdm
@@ -39,38 +24,44 @@ from app.model_handlers.movie_handler import MovieHandler
 
 fake = Faker()
 
+# Read config file
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(CURRENT_DIR, "generate_config.json")
+with open(CONFIG_PATH, "r") as f:
+    CONFIG = json.load(f)
+
 # =========================
-# CONFIG (tuned)
+# CONFIG 
 # =========================
-TOTAL_USERS = 20000
-ACTIVE_MOVIES = 10000
-CLUSTERS = 15
+TOTAL_USERS = CONFIG["TOTAL_USERS"]
+ACTIVE_MOVIES = CONFIG["ACTIVE_MOVIES"]
+CLUSTERS = CONFIG["CLUSTERS"]
 
 # User interaction density (reduced for ALS sparsity)
-AVG_INTERACTIONS = 14     # improved: ~14 interactions per user
-MIN_INTERACTIONS = 8
-MAX_INTERACTIONS = 18
+AVG_INTERACTIONS = CONFIG["AVG_INTERACTIONS"]
+MIN_INTERACTIONS = CONFIG["MIN_INTERACTIONS"]
+MAX_INTERACTIONS = CONFIG["MAX_INTERACTIONS"]
 
 # Popularity tiers — keep same
-TIER_A = 800
-TIER_B = 2000
-TIER_C = 4000
+TIER_A = CONFIG["TIER_A"]
+TIER_B = CONFIG["TIER_B"]
+TIER_C = CONFIG["TIER_C"]
 TIER_D = ACTIVE_MOVIES - (TIER_A + TIER_B + TIER_C)
 
 # Cluster movie selection
-CLUSTER_POOL_SIZE = 140        # ↓ reduced from 350 → stronger cluster identity
-CLUSTER_POOL_OVERLAP = 0.02    # 2% overlap → clean separation
+CLUSTER_POOL_SIZE = CONFIG["CLUSTER_POOL_SIZE"]      
+CLUSTER_POOL_OVERLAP = CONFIG["CLUSTER_POOL_OVERLAP"]
 
 # Batch size
-FEEDBACK_BATCH_SIZE = 5000
+FEEDBACK_BATCH_SIZE = CONFIG["FEEDBACK_BATCH_SIZE"]
 
 # Cluster vs random picks
-FRACTION_CLUSTER_POOL = 0.96    # users primarily consume cluster pool
-FRACTION_POPULARITY = 0.01      # very small global pop noise
-FRACTION_TAIL = 0.03            # mild long-tail inclusion
+FRACTION_CLUSTER_POOL = CONFIG["FRACTION_CLUSTER_POOL"]
+FRACTION_POPULARITY = CONFIG["FRACTION_POPULARITY"]
+FRACTION_TAIL = CONFIG["FRACTION_TAIL"]
 
-RATING_CHOICES = [i * 0.5 for i in range(1, 11)]
-RATING_WEIGHTS = [0.01, 0.02, 0.03, 0.05, 0.10, 0.15, 0.23, 0.22, 0.14, 0.05]
+RATING_CHOICES = CONFIG["RATING_CHOICES"]
+RATING_WEIGHTS = CONFIG["RATING_WEIGHTS"]
 
 # random seed
 SEED = 42

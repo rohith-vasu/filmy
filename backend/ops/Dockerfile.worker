@@ -1,0 +1,33 @@
+FROM python:3.10-slim
+
+# System deps for ML libraries, psycopg2, etc.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    gcc \
+    g++ \
+    libopenblas-dev \
+    liblapack-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install pip-tools
+RUN pip install pip-tools
+
+WORKDIR /app
+
+# Copy project metadata for fast Docker caching
+COPY pyproject.toml .
+
+# Generate requirements.txt from pyproject.toml
+RUN pip-compile --output-file requirements.txt pyproject.toml
+
+# Install dependencies from requirements.txt
+RUN pip install -r requirements.txt
+
+# Copy only the app and config
+COPY app ./app
+COPY config ./config
+
+# Prefect worker entry
+CMD ["prefect", "worker", "start", "--pool", "filmy-pool"]

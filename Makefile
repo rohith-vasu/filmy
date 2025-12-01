@@ -28,7 +28,7 @@ up-prod:
 
 # Start only dependencies (database, redis, etc.)
 up-deps:
-	$(DC) up -d postgres pgadmin qdrant
+	$(DC) up -d postgres pgadmin qdrant prefect-server prefect-worker mlflow minio
 
 # Stop services (but keep containers, volumes, and network)
 stop:
@@ -47,7 +47,7 @@ restart-deps:
 	$(MAKE) down
 	docker rmi $(PROJECT_NAME)/backend || true
 	$(DC) build backend
-	$(DC) up -d postgres pgadmin qdrant
+	$(DC) up -d postgres pgadmin qdrant prefect-server prefect-worker mlflow minio
 
 # Bring everything down (containers, networks)
 down:
@@ -68,4 +68,32 @@ ps:
 # Train implicit model
 .PHONY: train-model
 train-model:
-	cd backend && .venv/bin/python3 -m app.ml.pipelines.implicit_train
+	@if [ -f backend/.env.dev ]; then \
+		export $$(cat backend/.env.dev | grep -v '^#' | xargs) && \
+		cd backend && .venv/bin/python3 -m app.pipelines.training.train_implicit; \
+	else \
+		echo "Error: backend/.env.dev not found."; \
+		exit 1; \
+	fi
+
+# Generate synthetic feedbacks
+.PHONY: generate-synthetic-feedbacks
+generate-synthetic-feedbacks:
+	@if [ -f backend/.env.dev ]; then \
+		export $$(cat backend/.env.dev | grep -v '^#' | xargs) && \
+		cd backend && .venv/bin/python3 -m app.pipelines.data.generate_synthetic_feedbacks; \
+	else \
+		echo "Error: backend/.env.dev not found."; \
+		exit 1; \
+	fi
+
+# TMDB Ingestion
+.PHONY: ingest-tmdb
+ingest-tmdb:
+	@if [ -f backend/.env.dev ]; then \
+		export $$(cat backend/.env.dev | grep -v '^#' | xargs) && \
+		cd backend && .venv/bin/python -m app.pipelines.data.ingest_tmdb; \
+	else \
+		echo "Error: backend/.env.dev not found."; \
+		exit 1; \
+	fi

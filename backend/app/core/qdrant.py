@@ -47,7 +47,7 @@ class Qdrant:
     def _build_movie_embedding(self, title: str, overview: str, genres: List[str]) -> np.ndarray:
         """Generate a dense embedding for a movie."""
         text = f"{title}. {overview or ''}. Genres: {', '.join(genres or [])}."
-        return self.embedding_model.encode(text, normalize_embeddings=True)
+        return self.embedding_model.encode(text, normalize_embeddings=True).tolist()
 
     # --------------------------
     # CRUD Operations
@@ -119,7 +119,7 @@ class Qdrant:
         filters: Optional[Dict] = None,
     ):
         if query:
-            vector = self.embedding_model.encode(query, normalize_embeddings=True)
+            vector = self.embedding_model.encode(query, normalize_embeddings=True).tolist()
         elif movie_vector is not None:
             vector = movie_vector
         else:
