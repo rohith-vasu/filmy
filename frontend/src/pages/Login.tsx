@@ -82,9 +82,9 @@ const Login = () => {
           <span className="text-2xl font-heading font-bold">filmy</span>
         </Link>
 
-        <div className="bg-card border border-border rounded-2xl p-8">
-          <h1 className="text-3xl font-heading font-bold text-center">Welcome Back</h1>
-          <p className="text-muted-foreground text-center mb-8">
+        <div className="bg-card border border-border rounded-2xl p-5 sm:p-8">
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-center">Welcome Back</h1>
+          <p className="text-sm sm:text-base text-muted-foreground text-center mb-6 sm:mb-8">
             Log in to get personalized recommendations
           </p>
 

@@ -98,7 +98,7 @@ export function EditProfileModal({ open, onOpenChange }: EditProfileModalProps) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-[95%] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
         </DialogHeader>

@@ -332,7 +332,7 @@ const MovieModal = ({ id: propId, tmdbId, onClose, onWatchlistUpdate }: MovieMod
   return (
     <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="text-white border-zinc-800 max-w-[95%] sm:max-w-[780px] max-h-[85vh] overflow-y-auto scrollbar-hide p-6"
+        className="text-white border-zinc-800 max-w-[95%] sm:max-w-[780px] max-h-[90vh] overflow-y-auto scrollbar-hide p-4 sm:p-6"
         style={{ background: "var(--gradient-hero)" }}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -344,15 +344,15 @@ const MovieModal = ({ id: propId, tmdbId, onClose, onWatchlistUpdate }: MovieMod
             <Loader2 className="w-10 h-10 animate-spin text-white" />
           </div>
         ) : movie ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {/* Poster */}
             <div className="flex justify-center">
-              <img src={movie.poster_url} alt={movie.title} className="rounded-lg w-full sm:w-[300px] object-cover" />
+              <img src={movie.poster_url} alt={movie.title} className="rounded-lg w-full max-w-[280px] sm:w-[300px] object-cover" />
             </div>
 
             {/* Info */}
             <div className="flex flex-col">
-              <h3 className="text-2xl font-semibold mb-1 tracking-wide">{movie.title}</h3>
+              <h3 className="text-xl sm:text-2xl font-semibold mb-1 tracking-wide">{movie.title}</h3>
 
               <p className="text-sm text-gray-300 mb-1">
                 {movie.release_year}{movie.genres ? ` • ${movie.genres}` : ""}
@@ -363,36 +363,36 @@ const MovieModal = ({ id: propId, tmdbId, onClose, onWatchlistUpdate }: MovieMod
                 <p className="text-sm text-gray-400 mb-4">Runtime: {movie.runtime} min</p>
               )}
 
-              <p className={`${bodyTextClass} mb-6`}>{movie.overview || "No description available."}</p>
+              <p className={`${bodyTextClass} mb-4 sm:mb-6`}>{movie.overview || "No description available."}</p>
 
               {/* Action Pills */}
-              <div className="flex gap-3 mb-4">
+              <div className="flex flex-wrap gap-2 sm:gap-3 mb-4">
                 <button
                   type="button"
                   disabled={!isAuthenticated}
                   onClick={handleToggleWatched}
-                  className={`px-4 py-2 rounded-full flex items-center gap-2 border ${!isAuthenticated
+                  className={`px-3 sm:px-4 py-2 rounded-full flex items-center gap-2 border text-sm sm:text-base min-h-[44px] ${!isAuthenticated
                     ? "opacity-40 cursor-not-allowed border-gray-700 text-gray-400"
                     : status === "watched"
                       ? "bg-green-500 text-black border-green-600"
                       : "border-gray-700 text-gray-300"
                     }`}
                 >
-                  <Check className="w-4 h-4" /> Watched
+                  <Check className="w-4 h-4" /> <span className="hidden xs:inline">Watched</span><span className="xs:hidden">Watch</span>
                 </button>
 
                 <button
                   type="button"
                   disabled={!isAuthenticated}
                   onClick={handleToggleWatchlistClick}
-                  className={`px-4 py-2 rounded-full flex items-center gap-2 border ${!isAuthenticated
+                  className={`px-3 sm:px-4 py-2 rounded-full flex items-center gap-2 border text-sm sm:text-base min-h-[44px] ${!isAuthenticated
                     ? "opacity-40 cursor-not-allowed border-gray-700 text-gray-400"
                     : status === "watchlist"
                       ? "bg-white text-black border-white"
                       : "border-gray-700 text-gray-300"
                     }`}
                 >
-                  <Plus className="w-4 h-4" /> Watchlist
+                  <Plus className="w-4 h-4" /> <span className="hidden xs:inline">Watchlist</span><span className="xs:hidden">List</span>
                 </button>
               </div>
 
@@ -511,9 +511,9 @@ const MovieModal = ({ id: propId, tmdbId, onClose, onWatchlistUpdate }: MovieMod
 
         {/* Confirm watchlist modal */}
         {showConfirmWatchlist && pendingWatchlistNext === "watchlist" && (
-          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 rounded-lg">
-            <div className="bg-zinc-900 text-white rounded-xl p-5 w-[90%] sm:w-[420px] shadow-xl border border-zinc-700">
-              <h4 className="text-lg font-semibold mb-2">Remove rating & move to Watchlist?</h4>
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 rounded-lg p-4">
+            <div className="bg-zinc-900 text-white rounded-xl p-4 sm:p-5 w-full max-w-[420px] shadow-xl border border-zinc-700">
+              <h4 className="text-base sm:text-lg font-semibold mb-2">Remove rating & move to Watchlist?</h4>
               <p className="text-sm text-gray-300 mb-4">
                 Moving this movie to your Watchlist will remove your existing rating and review.
               </p>

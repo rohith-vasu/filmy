@@ -1,2 +1,92 @@
+# macOS
 .DS_Store
+
+# Python Virtual Environment
 .venv
+venv/
+ENV/
+env/
+
+# Environment Variables (IMPORTANT: Never commit secrets!)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Node.js / Frontend
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Data files (DVC should handle these)
+*.csv
+*.parquet
+*.pkl
+*.pickle
+!backend/data/.gitkeep
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# Logs
+*.log
+logs/
+
+# Docker volumes
+postgres-data/
+qdrant-data/
+minio-data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

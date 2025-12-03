@@ -145,7 +145,7 @@ export default function Dashboard() {
           {/* -----------------------------------------------------
                User Stats
           ------------------------------------------------------ */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm font-medium">Total Watched</CardTitle>

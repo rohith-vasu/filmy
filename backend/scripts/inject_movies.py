@@ -7,11 +7,11 @@ from tqdm import tqdm
 # -----------------------------
 # CONFIG
 # -----------------------------
-PARQUET_FILE = "data/tmdb_dataset_cleaned.parquet"
+PARQUET_FILE = "data/cleaned/tmdb_dataset_cleaned.parquet"
 
 DB_USER = "filmy"
 DB_PASS = "filmy"
-DB_HOST = "localhost"
+DB_HOST = "postgres"
 DB_NAME = "filmy_db"
 DB_PORT = 5432
 
