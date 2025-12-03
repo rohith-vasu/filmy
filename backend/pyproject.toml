@@ -15,7 +15,7 @@ dependencies = [
     "implicit>=0.7.2",
     "loguru>=0.7.3",
     "minio>=7.2.19",
-    "mlflow>=3.6.0",
+    "mlflow==3.6.0",
     "pandas>=2.3.3",
     "passlib>=1.7.4",
     "prefect>=3.6.4",
