@@ -45,8 +45,7 @@ POSTGRES_DSN = f"postgresql://{username}:{password}@{host}:{port}/{database}"
 LANGUAGE_MAP = {
     "en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil",
     "ml": "Malayalam", "kn": "Kannada", "bn": "Bengali", "mr": "Marathi",
-    "or": "Oriya", "ko": "Korean", "ja": "Japanese", "zh": "Mandarin", 
-    "cn": "Cantonese", "id": "Indonesian", "th": "Thai", "vi": "Vietnamese",
+    "or": "Oriya",
     "fr": "French", "de": "German", "it": "Italian", "es": "Spanish",
     "pt": "Portuguese", "nl": "Dutch", "sv": "Swedish", "da": "Danish",
     "fi": "Finnish", "pl": "Polish", "cs": "Czech", "sk": "Slovak",

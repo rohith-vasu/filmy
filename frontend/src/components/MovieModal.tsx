@@ -392,7 +392,7 @@ const MovieModal = ({ id: propId, tmdbId, onClose, onWatchlistUpdate }: MovieMod
                       : "border-gray-700 text-gray-300"
                     }`}
                 >
-                  <Plus className="w-4 h-4" /> <span className="hidden xs:inline">Watchlist</span><span className="xs:hidden">List</span>
+                  <Plus className="w-4 h-4" /> <span className="hidden xs:inline">Watchlist</span><span className="xs:hidden">Watchlist</span>
                 </button>
               </div>
 

@@ -90,3 +90,6 @@ minio-data/
 tmp/
 temp/
 *.tmp
+
+ops/
+backend/scripts/

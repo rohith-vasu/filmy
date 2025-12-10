@@ -22,63 +22,73 @@ class RecommendationService:
         self.feedback_handler = UserFeedbackHandler(db)
         self.qdrant = get_qdrant_client()
 
-        self.implicit_model = MODEL_CACHE["implicit_model"]
-        self.dataset_map = MODEL_CACHE["dataset_map"]
-        self.item_factors = MODEL_CACHE["item_factors"]
-        self.user_factors = MODEL_CACHE["user_factors"]
+        # load model artifacts from MODEL_CACHE (populated by loader)
+        self.implicit_model = MODEL_CACHE.get("implicit_model")
+        self.dataset_map = MODEL_CACHE.get("dataset_map")
+        self.item_factors = MODEL_CACHE.get("item_factors")
+        self.user_factors = MODEL_CACHE.get("user_factors")
 
-    def _rerank_with_implicit(self, user_id: int, candidate_ids: List[int]):
-        if not self.implicit_model:
+    def _rerank_with_implicit(self, user_id: int, candidate_ids: List[int]) -> List[int]:
+        """
+        Rerank candidate ids using ALS user/item factors.
+        Under A1, item_factors and user_factors are available for full catalog.
+        """
+        if not self.implicit_model or not self.dataset_map:
             return candidate_ids
 
         user_map = self.dataset_map["user_map"]
         item_map = self.dataset_map["item_map"]
 
+        # if user not in map, cannot use ALS re-rank
         if user_id not in user_map:
             return candidate_ids
 
         uidx = user_map[user_id]
-        user_vec = self.user_factors[uidx]
+        user_vec = self.user_factors[uidx] if self.user_factors is not None else self.implicit_model.user_factors[uidx]
 
-        filtered = [cid for cid in candidate_ids if cid in item_map]
-        if not filtered:
+        # Map candidates to indices where possible. Because A1 maps all items, we expect all candidates present.
+        indices = []
+        mapped = []
+        for cid in candidate_ids:
+            if cid in item_map:
+                indices.append(item_map[cid])
+                mapped.append(cid)
+            else:
+                # If some item is missing (unlikely in A1), we keep it for fallback scoring
+                mapped.append(cid)
+
+        if not indices:
             return candidate_ids
 
-        indices = [item_map[c] for c in filtered]
         item_vecs = self.item_factors[indices]
         scores = item_vecs.dot(user_vec)
-
         order = np.argsort(-scores)
-        return [filtered[i] for i in order]
+        ordered = [mapped[i] for i in order]
+        # There may be candidate ids not mapped (if any); append them at the end
+        unmapped = [cid for cid in candidate_ids if cid not in ordered]
+        return ordered + unmapped
 
     def recommend_for_cold_start(self, user_id: int, limit: int = 10):
-
         user = self.user_handler.get_by_id(user_id)
         if not user or not user.genre_preferences:
             popular = self.movie_handler.list_all(skip=0, limit=limit*3)
             return [self.movie_handler._response_schema.model_validate(m) for m in popular[:limit]]
 
         genres = [g.strip() for g in user.genre_preferences.split(",") if g.strip()]
-
         if not genres:
             popular = self.movie_handler.list_all(skip=0, limit=limit*3)
             return [self.movie_handler._response_schema.model_validate(m) for m in popular[:limit]]
 
         query = f"Movies in genres: {', '.join(genres)}. Recommend good movies."
-
         vec = self.qdrant.embedding_model.encode(query, normalize_embeddings=True).tolist()
-        results = self.qdrant.search_similar(movie_vector=vec, top=limit * 20)
-
+        results = self.qdrant.search_similar(movie_vector=vec, top=limit * 50)
         filtered = []
         for r in results:
-            movie = self.movie_handler.get_by_id(r["id"])
+            movie = self.movie_handler.get_by_id(int(r["id"]))
             if movie and any(g.lower() in (movie.genres or "").lower() for g in genres):
                 filtered.append(movie)
-
         filtered = sorted(filtered, key=lambda m: m.popularity or 0, reverse=True)
-
         return [self.movie_handler._response_schema.model_validate(m) for m in filtered[:limit]]
-
 
     def guest_recommendations(
         self, 
@@ -120,12 +130,7 @@ class RecommendationService:
         return self.movie_handler.list_all(skip=0, limit=limit)
 
 
-    def personalized_recommendations(
-        self, 
-        user_id: int, 
-        limit: int = 10
-    ):
-        # Cold start: fallback to genre preferences / popular if no feedback
+    def personalized_recommendations(self, user_id: int, limit: int = 10):
         feedbacks = self.feedback_handler.get_user_feedbacks(user_id)
         if not feedbacks:
             return self.recommend_for_cold_start(user_id, limit)
@@ -135,15 +140,14 @@ class RecommendationService:
 
         user_map = self.dataset_map.get("user_map", {})
         item_map = self.dataset_map.get("item_map", {})
-        inv_item_map = self.dataset_map.get("inv_item_map", {})
 
         if user_id not in user_map:
             return self.recommend_for_cold_start(user_id, limit)
 
         model_user_index = user_map[user_id]
 
-        # Candidate generation (use recent watched movies)
-        recent = feedbacks[-5:]
+        # Candidate generation using recent watched
+        recent = feedbacks[-10:]
         movie_ids = [f.movie_id for f in recent]
         texts = []
         for mid in movie_ids:
@@ -152,40 +156,37 @@ class RecommendationService:
                 texts.append(f"{m.title}. {m.overview or ''}. Genres: {m.genres or ''}")
         query = " ".join(texts) if texts else None
 
+        candidate_ids = []
         if query:
             vec = self.qdrant.embedding_model.encode(query, normalize_embeddings=True).tolist()
-            candidates = self.qdrant.search_similar(movie_vector=vec, top=limit * 20)
-            candidate_ids = [c["id"] for c in candidates if c["id"] in item_map]
+            # fetch a much larger pool to give ALS room to rerank
+            qres = self.qdrant.search_similar(movie_vector=vec, top=limit * 200)
+            candidate_ids = [int(r["id"]) for r in qres]
         else:
-            # fallback: top popular items from DB (but we still want to rerank)
-            candidate_rows = self.movie_handler.list_all(skip=0, limit=limit * 20)
-            candidate_ids = [m.id for m in candidate_rows if m.id in item_map]
+            candidate_rows = self.movie_handler.list_all(skip=0, limit=limit * 200)
+            candidate_ids = [m.id for m in candidate_rows]
 
         if not candidate_ids:
             return self.recommend_for_cold_start(user_id, limit)
 
-        candidate_item_indices = [item_map[cid] for cid in candidate_ids]
+        # Rerank candidates with ALS (A1: item_factors available for full catalog)
+        ranked_candidate_ids = self._rerank_with_implicit(user_id, candidate_ids)
 
-        # Score using dot(user_vector, item_vectors)
-        if self.user_factors is not None:
-            user_vector = self.user_factors[model_user_index]
-        else:
-            # fall back to using implicit model's user_factors if present
-            user_vector = self.implicit_model.user_factors[model_user_index]
-
-        item_vectors = self.item_factors[candidate_item_indices]
-        scores = item_vectors.dot(user_vector)
-
-        ranked_idx = np.argsort(-scores)
-        ranked_candidate_ids = [candidate_ids[i] for i in ranked_idx]
-
-        # Filter watched
+        # Filter watched: only remove movies the user has actually watched (lifetime)
         watched = {fb.movie_id for fb in feedbacks}
-        final_ids = [mid for mid in ranked_candidate_ids if mid not in watched][:limit]
+        final_ids = [mid for mid in ranked_candidate_ids if mid not in watched]
+
+        # If not enough after filtering, fill with popularity-based items not watched
+        if len(final_ids) < limit:
+            need = limit - len(final_ids)
+            popular_rows = self.movie_handler.list_all(skip=0, limit=limit * 50)
+            popular_ids = [m.id for m in popular_rows if m.id not in watched and m.id not in final_ids]
+            final_ids.extend(popular_ids[:need])
+
+        final_ids = final_ids[:limit]
 
         movies = [self.movie_handler.get_by_id(mid) for mid in final_ids]
         return [self.movie_handler._response_schema.model_validate(m) for m in movies if m]
-
 
     def recommendations_based_on_recent_activity(
         self,

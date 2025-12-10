@@ -14,19 +14,27 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
 const GenreSelectionModal = () => {
-    const { user, isAuthenticated, setUser } = useAuthStore();
+    const { user, isAuthenticated, authLoaded, setUser } = useAuthStore();
     const [open, setOpen] = useState(false);
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        // Show modal if user is logged in but has no genre preferences
-        if (isAuthenticated && user && !user.genre_preferences) {
-            setOpen(true);
+        // Show modal only after auth is fully loaded and if user has no genre preferences
+        if (authLoaded && isAuthenticated && user) {
+            // Only check if genre_preferences is defined (backend has responded)
+            // undefined = still loading from backend, don't show modal yet
+            // null or empty string = backend confirmed no preferences, show modal
+            if (user.genre_preferences !== undefined) {
+                const hasPreferences = user.genre_preferences && user.genre_preferences.trim().length > 0;
+                setOpen(!hasPreferences);
+            } else {
+                setOpen(false);
+            }
         } else {
             setOpen(false);
         }
-    }, [isAuthenticated, user]);
+    }, [authLoaded, isAuthenticated, user]);
 
     const toggleGenre = (genre: string) => {
         setSelectedGenres((prev) =>

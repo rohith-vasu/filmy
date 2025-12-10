@@ -1,7 +1,0 @@
-FROM ghcr.io/mlflow/mlflow:latest
-
-# For Postgres backend store
-RUN pip install psycopg2-binary botocore
-
-# For MinIO / S3 artifact browsing
-RUN pip install boto3 botocore
